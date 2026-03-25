@@ -4,33 +4,9 @@ import io
 import base64
 import time
 import os
-import json
 from datetime import datetime
 import tempfile
 import zipfile
-
-# ============================================================
-# Vertex AI Authentication Setup
-# ============================================================
-# Write GCP service account credentials from Streamlit secrets
-# to a temporary file for Vertex AI authentication
-if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in st.secrets:
-    creds_json = st.secrets["GOOGLE_APPLICATION_CREDENTIALS_JSON"]
-    creds_path = "/tmp/gcp_creds.json"
-    with open(creds_path, "w") as f:
-        if isinstance(creds_json, str):
-            f.write(creds_json)
-        else:
-            json.dump(dict(creds_json), f)
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
-
-# Set Vertex AI environment variables from secrets
-if "GCP_PROJECT_ID" in st.secrets:
-    os.environ["GOOGLE_CLOUD_PROJECT"] = st.secrets["GCP_PROJECT_ID"]
-if "GCP_LOCATION" in st.secrets:
-    os.environ["GOOGLE_CLOUD_LOCATION"] = st.secrets["GCP_LOCATION"]
-os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
-# ============================================================
 
 # Import your modules (make sure these files are in the same directory)
 try:
@@ -108,7 +84,7 @@ def pdf_to_markdown(pdf_file):
         st.error(f"Error converting PDF: {e}")
         return None
 
-def process_with_gemini(markdown_content, project_id, location="global"):
+def process_with_gemini(markdown_content, api_key):
     """Process markdown with Gemini API via Vertex AI"""
     try:
         # Convert to base64
@@ -118,11 +94,8 @@ def process_with_gemini(markdown_content, project_id, location="global"):
         if not base64_result['success']:
             return None, f"Base64 conversion failed: {base64_result['error']}"
 
-        # Process with Gemini via Vertex AI
-        converter_gemini = GeminiMarkdownToCSVConverter(
-            project_id=project_id,
-            location=location,
-        )
+        # Process with Gemini via Vertex AI using API key
+        converter_gemini = GeminiMarkdownToCSVConverter(api_key=api_key)
         result = converter_gemini.convert_markdown_to_csv(
             markdown_content=base64_result['base64_content'],
             is_base64=True
@@ -229,12 +202,12 @@ def dashboard_page():
         st.success("✅ PDF Converter: Ready")
         st.success("✅ Base64 Converter: Ready")
 
-        # Check Vertex AI configuration
-        gcp_project = st.secrets.get("GCP_PROJECT_ID", "")
-        if gcp_project:
-            st.success(f"✅ Vertex AI: Connected (Project: {gcp_project})")
+        # Check Vertex AI API key
+        gcp_api_key = st.secrets.get("GCP_API_KEY", "")
+        if gcp_api_key:
+            st.success("✅ Vertex AI (API Key): Connected")
         else:
-            st.warning("⚠️ Vertex AI: Not configured (missing GCP_PROJECT_ID)")
+            st.warning("⚠️ Vertex AI: Not configured (missing GCP_API_KEY)")
 
     with col2:
         st.success("✅ OFAC Service: Ready")
@@ -245,12 +218,11 @@ def pdf_processing_page():
     """PDF processing page"""
     st.title("📄 PDF Processing")
 
-    # Check Vertex AI configuration
-    gcp_project = st.secrets.get("GCP_PROJECT_ID", "")
-    gcp_location = st.secrets.get("GCP_LOCATION", "global")
+    # Check Vertex AI API key
+    gcp_api_key = st.secrets.get("GCP_API_KEY", "")
 
-    if not gcp_project:
-        st.error("❌ GCP Project ID not configured. Please set GCP_PROJECT_ID in Streamlit secrets.")
+    if not gcp_api_key:
+        st.error("❌ GCP API Key not configured. Please set GCP_API_KEY in Streamlit secrets.")
         return
 
     # File upload
@@ -290,9 +262,7 @@ def pdf_processing_page():
                 status_text.text("🤖 Processing with Gemini AI (Vertex AI)...")
                 progress_bar.progress(60)
 
-                csv_content, error = process_with_gemini(
-                    markdown_content, gcp_project, gcp_location
-                )
+                csv_content, error = process_with_gemini(markdown_content, gcp_api_key)
 
                 if csv_content and not error:
                     progress_bar.progress(100)
@@ -425,12 +395,11 @@ def batch_processing_page():
     """Batch processing page"""
     st.title("⚙️ Batch Processing")
 
-    # Check Vertex AI configuration
-    gcp_project = st.secrets.get("GCP_PROJECT_ID", "")
-    gcp_location = st.secrets.get("GCP_LOCATION", "global")
+    # Check Vertex AI API key
+    gcp_api_key = st.secrets.get("GCP_API_KEY", "")
 
-    if not gcp_project:
-        st.error("❌ GCP Project ID not configured. Please set GCP_PROJECT_ID in Streamlit secrets.")
+    if not gcp_api_key:
+        st.error("❌ GCP API Key not configured. Please set GCP_API_KEY in Streamlit secrets.")
         return
 
     # Multiple file upload
@@ -484,9 +453,7 @@ def batch_processing_page():
 
                 if markdown_content:
                     # Process with Gemini via Vertex AI
-                    csv_content, error = process_with_gemini(
-                        markdown_content, gcp_project, gcp_location
-                    )
+                    csv_content, error = process_with_gemini(markdown_content, gcp_api_key)
 
                     if csv_content and not error:
                         try:
