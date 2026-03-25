@@ -11,18 +11,16 @@ from datetime import datetime
 
 
 class GeminiMarkdownToCSVConverter:
-    def __init__(self, project_id: str, location: str = "global"):
+    def __init__(self, api_key: str):
         """
-        Initialize the converter with Vertex AI credentials
+        Initialize the converter with Vertex AI API key
 
         Args:
-            project_id (str): Your Google Cloud Project ID
-            location (str): GCP region (default: "global")
+            api_key (str): Your Google Cloud API key (from APIs & Services > Credentials)
         """
         self.client = genai.Client(
             vertexai=True,
-            project=project_id,
-            location=location,
+            api_key=api_key,
         )
         self.model = "gemini-2.5-pro"
 
@@ -241,18 +239,14 @@ def main():
     """
     Example usage of the converter
     """
-    # Initialize with your GCP Project ID
-    PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT')  # Set via environment variable
-    LOCATION = os.getenv('GOOGLE_CLOUD_LOCATION', 'global')
+    # Initialize with your GCP API Key
+    API_KEY = os.getenv('GCP_API_KEY')
 
-    if not PROJECT_ID:
-        print("Please set GOOGLE_CLOUD_PROJECT environment variable")
+    if not API_KEY:
+        print("Please set GCP_API_KEY environment variable")
         return
 
-    converter = GeminiMarkdownToCSVConverter(
-        project_id=PROJECT_ID,
-        location=LOCATION,
-    )
+    converter = GeminiMarkdownToCSVConverter(api_key=API_KEY)
 
     # Example usage scenarios:
 
